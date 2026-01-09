@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "nfcReader",
-    "slug": "nfcReader",
+    "name": "Checador NFC",
+    "slug": "nfc-checador",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,21 +10,66 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1976D2"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tuempresa.nfcchecador",
+      "infoPlist": {
+        "NFCReaderUsageDescription": "Esta aplicación necesita acceso al NFC para leer tarjetas de empleados y registrar su acceso.",
+        "NSCameraUsageDescription": "La aplicación puede usar la cámara para funcionalidades futuras."
+      },
+      "entitlements": {
+        "com.apple.developer.nfc.readersession.formats": [
+          "NDEF",
+          "TAG"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#1976D2"
       },
+      "package": "com.tuempresa.nfcchecador",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.NFC",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.VIBRATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "android.nfc.action.NDEF_DISCOVERED",
+          "category": "android.intent.category.DEFAULT"
+        },
+        {
+          "action": "android.nfc.action.TAG_DISCOVERED",
+          "category": "android.intent.category.DEFAULT"
+        },
+        {
+          "action": "android.nfc.action.TECH_DISCOVERED",
+          "category": "android.intent.category.DEFAULT"
+        }
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-dev-client"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "676ee183-5098-41df-8e6e-d556d33de9a0"
+      }
+    },
+    "owner": "luchadortomy"
   }
 }
