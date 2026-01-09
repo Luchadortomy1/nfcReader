@@ -8,6 +8,12 @@ export interface NFCData {
 }
 
 class NFCService {
+  private mostrarErrores: boolean = true;
+
+  // 🔧 Configurar si mostrar errores
+  configurarMostrarErrores(mostrar: boolean): void {
+    this.mostrarErrores = mostrar;
+  }
   private isInitialized = false;
 
   // 🚀 Inicializar NFC
@@ -109,11 +115,37 @@ class NFCService {
         name: error.name
       });
       
-      Alert.alert(
-        'Error de Lectura', 
-        `No se pudo leer la tarjeta NFC.\n\nDetalle: ${error.message}\n\nInténtalo de nuevo.`
+      // NUNCA mostrar Alert si está deshabilitado
+      if (!this.mostrarErrores) {
+        console.log('ℹ️ Errores silenciados - no mostrar Alert');
+        return null;
+      }
+      
+      // Verificar si fue cancelación del usuario
+      const isCancellation = error.message && (
+        error.message.includes('cancelled') || 
+        error.message.includes('canceled') ||
+        error.message.includes('User canceled') ||
+        error.message.includes('Operation was cancelled') ||
+        error.message.includes('Request cancelled') ||
+        error.message.includes('NFC operation cancelled') ||
+        error.message.includes('Tag connection lost') ||
+        error.message.includes('Operation aborted')
       );
-      return null;
+      
+      if (isCancellation) {
+        // Cancelación silenciosa - NO mostrar Alert
+        console.log('ℹ️ NFC cancelado silenciosamente por el usuario');
+        return null;
+      } else {
+        // Solo mostrar Alert para errores reales y si están habilitados
+        console.log('⚠️ Error real de NFC - mostrando Alert');
+        Alert.alert(
+          'Error de Lectura', 
+          `No se pudo leer la tarjeta NFC.\n\nInténtalo de nuevo.`
+        );
+        throw error;
+      }
     } finally {
       // Cancelar la detección NFC
       this.cancelarDeteccion();
@@ -147,12 +179,21 @@ class NFCService {
 
   // ❌ Cancelar detección NFC
   cancelarDeteccion(): void {
+    // Deshabilitar errores antes de cancelar
+    this.configurarMostrarErrores(false);
+    
     try {
       NfcManager.cancelTechnologyRequest();
-      console.log('🛑 Detección NFC cancelada');
+      console.log('🛑 Detección NFC cancelada silenciosamente');
     } catch (error) {
-      console.log('ℹ️ No había detección activa para cancelar');
+      // Ignorar todos los errores de cancelación
+      console.log('ℹ️ Cancelación de NFC completada (silencioso)');
     }
+    
+    // Reactivar errores después de un pequeño delay
+    setTimeout(() => {
+      this.configurarMostrarErrores(true);
+    }, 1000);
   }
 
   // 🔧 Utility: Procesar UID en diferentes formatos

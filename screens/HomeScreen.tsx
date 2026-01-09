@@ -83,7 +83,7 @@ export default function HomeScreen({ navigation }: Props) {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>📱 Checador NFC</Text>
+        <Text style={styles.title}>Checador NFC</Text>
         <Text style={styles.subtitle}>Control de Acceso Empresarial</Text>
       </View>
 
@@ -143,11 +143,8 @@ export default function HomeScreen({ navigation }: Props) {
 
       {/* Footer informativo */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          💡 Proyecto Escolar - Checador de Empleados
-        </Text>
         <Text style={styles.versionText}>
-          {Platform.OS === 'ios' ? '📱 iOS' : '🤖 Android'} | Versión 1.0.0
+          Versión 6.7
         </Text>
       </View>
     </View>

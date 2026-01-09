@@ -3,9 +3,17 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { LogBox } from 'react-native';
+
+// 🔇 Suprimir warnings y errores visuales en la app (solo en consola)
+LogBox.ignoreAllLogs(true); // Ocultar todos los warnings/errores de la UI
+console.disableYellowBox = true; // Para versiones anteriores
 
 // Importar tipos de navegación
 import { RootStackParamList } from './types/navigation';
+
+// Importar componentes
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Importar pantallas
 import HomeScreen from './screens/HomeScreen';
@@ -18,7 +26,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar style="light" backgroundColor="#1976D2" />
       <NavigationContainer>
         <Stack.Navigator
@@ -67,6 +75,6 @@ export default function App() {
           />
         </Stack.Navigator>
       </NavigationContainer>
-    </>
+    </ErrorBoundary>
   );
 }

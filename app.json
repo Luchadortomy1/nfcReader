@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Checador NFC",
+    "name": "NFC Checador",
     "slug": "nfc-checador",
     "version": "1.0.0",
     "orientation": "portrait",

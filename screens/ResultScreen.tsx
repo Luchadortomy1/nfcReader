@@ -26,7 +26,7 @@ export default function ResultScreen({ navigation, route }: Props) {
           icon: '✅',
           title: 'Acceso Autorizado',
           buttonColor: '#388E3C',
-          buttonText: '✨ Perfecto'
+          buttonText: 'Perfecto'
         };
       case 'not_found':
         return {
@@ -71,8 +71,14 @@ export default function ResultScreen({ navigation, route }: Props) {
 
   const repetirAccion = () => {
     if (type === 'success') {
-      // Si fue exitoso, volver al scanner para otro empleado
-      navigation.navigate('ScanCard');
+      // Si fue exitoso, ir al scanner pero resetear el stack para evitar problemas de navegación
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: 'Home' },
+          { name: 'ScanCard' }
+        ],
+      });
     } else {
       // Si hubo error o no se encontró, intentar de nuevo
       navigation.navigate('ScanCard');
@@ -86,7 +92,7 @@ export default function ResultScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <Text style={styles.resultIcon}>{config.icon}</Text>
         <Text style={styles.resultTitle}>{config.title}</Text>
-        <Text style={styles.timestamp}>🕐 {currentTime}</Text>
+        <Text style={styles.timestamp}> {currentTime}</Text>
       </View>
 
       {/* Contenido principal */}
@@ -100,7 +106,7 @@ export default function ResultScreen({ navigation, route }: Props) {
         {/* Información del empleado (si existe) */}
         {employee && (
           <View style={styles.employeeCard}>
-            <Text style={styles.employeeTitle}>👤 Información del Empleado:</Text>
+            <Text style={styles.employeeTitle}>Información del Empleado:</Text>
             <View style={styles.employeeInfo}>
               <View style={styles.employeeRow}>
                 <Text style={styles.employeeLabel}>Nombre:</Text>
@@ -136,41 +142,19 @@ export default function ResultScreen({ navigation, route }: Props) {
             style={styles.homeButton}
             onPress={volverAlInicio}
           >
-            <Text style={styles.homeButtonText}>🏠 Volver al Inicio</Text>
+            <Text style={styles.homeButtonText}>Volver al Inicio</Text>
           </TouchableOpacity>
           
         </View>
 
         {/* Información adicional según el tipo */}
         <View style={styles.infoSection}>
-          {type === 'success' && (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>✨ Acceso Registrado:</Text>
-              <Text style={styles.infoText}>
-                • El acceso ha sido registrado correctamente{'\n'}
-                • La hora y fecha se guardaron en la base de datos{'\n'}
-                • El empleado puede continuar con sus actividades
-              </Text>
-            </View>
-          )}
 
-          {type === 'not_found' && (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>⚠️ Tarjeta No Registrada:</Text>
-              <Text style={styles.infoText}>
-                • Esta tarjeta no está en el sistema{'\n'}
-                • Contacta al administrador para registrarla{'\n'}
-                • Verifica que sea la tarjeta correcta
-              </Text>
-            </View>
-          )}
 
           {type === 'error' && (
             <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>❌ Error del Sistema:</Text>
+              <Text style={styles.infoTitle}>Error del Sistema:</Text>
               <Text style={styles.infoText}>
-                • Verifica la conexión a internet{'\n'}
-                • Asegúrate de que el NFC esté habilitado{'\n'}
                 • Intenta acercar más la tarjeta al dispositivo
               </Text>
             </View>

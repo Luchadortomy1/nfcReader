@@ -41,19 +41,8 @@ export default function RegisterCardScreen({ navigation }: Props) {
   const escanearTarjeta = async () => {
     setIsScanning(true);
     
-    try {
-      Alert.alert(
-        '📱 Escanear Tarjeta NFC',
-        'Acerca la tarjeta NFC al dispositivo para detectarla.',
-        [
-          { text: 'Cancelar', onPress: () => setIsScanning(false), style: 'cancel' },
-          { text: 'Continuar', onPress: procederConEscaneo }
-        ]
-      );
-    } catch (error) {
-      setIsScanning(false);
-      console.error('Error iniciando escaneo:', error);
-    }
+    // Ir directo al escaneo sin mostrar cuadro de diálogo
+    procederConEscaneo();
   };
 
   const procederConEscaneo = async () => {
@@ -66,7 +55,7 @@ export default function RegisterCardScreen({ navigation }: Props) {
         
         if (yaExiste) {
           Alert.alert(
-            '⚠️ Tarjeta ya registrada',
+            'Tarjeta ya registrada',
             'Esta tarjeta NFC ya está registrada en el sistema.',
             [{ text: 'OK', style: 'default' }]
           );
@@ -74,18 +63,31 @@ export default function RegisterCardScreen({ navigation }: Props) {
           setFormData(prev => ({ ...prev, uid: nfcData.uid }));
           setCardDetected(true);
           Alert.alert(
-            '✅ Tarjeta Detectada',
-            `UID: ${nfcData.uid.substring(0, 8)}...\\n\\nAhora completa la información del empleado.`,
+            'Tarjeta Detectada',
+            `Ahora completa la información del empleado.`,
             [{ text: 'Continuar', style: 'default' }]
           );
         }
       } else {
-        Alert.alert('❌ Error', 'No se pudo leer la tarjeta NFC');
+        // Solo mostrar error si realmente falló la lectura (no por cancelación)
+        console.log('No se recibió data de NFC (posible cancelación)');
       }
       
     } catch (error) {
-      console.error('Error leyendo tarjeta:', error);
-      Alert.alert('❌ Error', 'Ocurrió un error al leer la tarjeta');
+      // Solo mostrar error si no fue una cancelación del usuario
+      const isCancellation = error.message && (
+        error.message.includes('cancelled') || 
+        error.message.includes('canceled') ||
+        error.message.includes('User canceled') ||
+        error.message.includes('Operation was cancelled')
+      );
+      
+      if (!isCancellation) {
+        console.error('❌ Error leyendo tarjeta:', error);
+        Alert.alert('❌ Error', 'Ocurrió un error al leer la tarjeta');
+      } else {
+        console.log('ℹ️ Registro de tarjeta cancelado por el usuario');
+      }
     } finally {
       setIsScanning(false);
     }
@@ -95,17 +97,17 @@ export default function RegisterCardScreen({ navigation }: Props) {
   const guardarRegistro = async () => {
     // Validaciones
     if (!formData.uid) {
-      Alert.alert('❌ Error', 'Primero debe escanear una tarjeta NFC');
+      Alert.alert('Error', 'Primero debe escanear una tarjeta NFC');
       return;
     }
 
     if (!formData.nombre.trim()) {
-      Alert.alert('❌ Error', 'El nombre es obligatorio');
+      Alert.alert('Error', 'El nombre es obligatorio');
       return;
     }
 
     if (!formData.ocupacion.trim()) {
-      Alert.alert('❌ Error', 'La ocupación es obligatoria');
+      Alert.alert('Error', 'La ocupación es obligatoria');
       return;
     }
 
@@ -119,12 +121,12 @@ export default function RegisterCardScreen({ navigation }: Props) {
         ocupacion: formData.ocupacion.trim()
       });
 
-      console.log('✅ Empleado registrado con ID:', documentId);
+      console.log('Empleado registrado con ID:', documentId);
 
       // Navegar a pantalla de resultado exitoso
       navigation.navigate('Result', {
         type: 'success',
-        message: `✅ Tarjeta registrada exitosamente\\n\\n👤 ${formData.nombre}\\n💼 ${formData.ocupacion}`,
+        message: `Tarjeta registrada exitosamente ${formData.nombre}.  ${formData.ocupacion}`,
         employee: {
           nombre: formData.nombre,
           ocupacion: formData.ocupacion,
@@ -155,15 +157,15 @@ export default function RegisterCardScreen({ navigation }: Props) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🆕 Registrar Tarjeta</Text>
-        <Text style={styles.subtitle}>Nueva tarjeta NFC de empleado</Text>
+        <Text style={styles.title}>Registrar Tarjeta</Text>
+        <Text style={styles.subtitle}>Nueva tarjeta de empleado</Text>
       </View>
 
       <View style={styles.content}>
         
         {/* Paso 1: Escanear tarjeta */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📱 Paso 1: Escanear Tarjeta NFC</Text>
+          <Text style={styles.sectionTitle}>Paso 1: Escanear Tarjeta NFC</Text>
           
           <TouchableOpacity
             style={[
@@ -189,7 +191,6 @@ export default function RegisterCardScreen({ navigation }: Props) {
               </View>
             ) : (
               <View style={styles.scanningContainer}>
-                <Text style={styles.scanIcon}>📱</Text>
                 <Text style={styles.scanButtonText}>Tocar para Escanear</Text>
               </View>
             )}
@@ -198,7 +199,7 @@ export default function RegisterCardScreen({ navigation }: Props) {
 
         {/* Paso 2: Información del empleado */}
         <View style={[styles.section, !cardDetected && styles.sectionDisabled]}>
-          <Text style={styles.sectionTitle}>👤 Paso 2: Datos del Empleado</Text>
+          <Text style={styles.sectionTitle}>Paso 2: Datos del Empleado</Text>
           
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Nombre Completo *</Text>
@@ -242,20 +243,10 @@ export default function RegisterCardScreen({ navigation }: Props) {
               <Text style={styles.saveButtonText}>Guardando...</Text>
             </View>
           ) : (
-            <Text style={styles.saveButtonText}>💾 Guardar Registro</Text>
+            <Text style={styles.saveButtonText}>Guardar Registro</Text>
           )}
         </TouchableOpacity>
 
-        {/* Información adicional */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>ℹ️ Información:</Text>
-          <Text style={styles.infoText}>
-            • La tarjeta NFC debe estar físicamente presente{'\n'}
-            • Cada tarjeta solo puede registrarse una vez{'\n'}
-            • Los datos se guardan en Firebase de forma segura{'\n'}
-            • El registro incluye fecha y hora automáticamente
-          </Text>
-        </View>
         
       </View>
     </ScrollView>

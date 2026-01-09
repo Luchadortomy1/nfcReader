@@ -8,7 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  Vibration
+  Vibration,
+  BackHandler
 } from 'react-native';
 import { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
@@ -27,32 +28,48 @@ export default function ScanCardScreen({ navigation }: Props) {
     // Auto-iniciar escaneo al entrar a la pantalla
     iniciarEscaneo();
     
+    // Manejar el back button para siempre ir al Home
+    const backAction = () => {
+      limpiarYSalir();
+      navigation.navigate('Home');
+      return true; // Prevenir el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    
     return () => {
-      // Limpiar al salir de la pantalla
-      NFCService.cancelarDeteccion();
+      // Limpiar completamente al salir de la pantalla
+      limpiarYSalir();
+      backHandler.remove();
     };
   }, []);
+
+  // 🧹 Limpiar estado y procesos NFC
+  const limpiarYSalir = () => {
+    console.log('🧹 Limpiando estado completamente...');
+    setIsScanning(false);
+    setScanCount(0);
+    
+    // Cancelación silenciosa
+    NFCService.cancelarDeteccion();
+  };
+
+  // 🛑 Solo cancelar escaneo (quedarse en pantalla)
+  const cancelarEscaneo = () => {
+    console.log('🛑 Cancelando escaneo - quedándose en pantalla');
+    setIsScanning(false);
+    
+    // Cancelación silenciosa
+    NFCService.cancelarDeteccion();
+  };
 
   // 🔍 Iniciar proceso de escaneo
   const iniciarEscaneo = () => {
     setIsScanning(true);
     setScanCount(prev => prev + 1);
     
-    Alert.alert(
-      '🔍 Checador de Empleados',
-      'Acerca la tarjeta NFC del empleado al dispositivo.',
-      [
-        { 
-          text: 'Cancelar', 
-          onPress: () => {
-            setIsScanning(false);
-            navigation.goBack();
-          }, 
-          style: 'cancel' 
-        },
-        { text: 'Listo', onPress: procesarEscaneo }
-      ]
-    );
+    // Ir directo al escaneo sin mostrar cuadro de diálogo
+    procesarEscaneo();
   };
 
   // 📖 Procesar el escaneo de la tarjeta
@@ -70,12 +87,36 @@ export default function ScanCardScreen({ navigation }: Props) {
         await buscarEmpleado(nfcData.uid);
         
       } else {
-        mostrarErrorEscaneo('No se pudo leer la tarjeta NFC');
+        // Solo mostrar error si realmente falló la lectura (no por cancelación)
+        console.log('ℹ️ No se recibió data de NFC (posible cancelación)');
       }
       
     } catch (error) {
-      console.error('❌ Error en escaneo:', error);
-      mostrarErrorEscaneo('Error al procesar la tarjeta');
+      console.error('❌ Error en procesarEscaneo:', error);
+      
+      // Si el estado ya se limpió, no hacer nada más
+      if (!isScanning) {
+        console.log('ℹ️ Estado ya limpiado, ignorando error');
+        return;
+      }
+      
+      // Solo mostrar error si no fue una cancelación del usuario
+      const isCancellation = error.message && (
+        error.message.includes('cancelled') || 
+        error.message.includes('canceled') ||
+        error.message.includes('User canceled') ||
+        error.message.includes('Operation was cancelled') ||
+        error.message.includes('Request cancelled')
+      );
+      
+      if (!isCancellation) {
+        console.error('❌ Error real en escaneo:', error);
+        mostrarErrorEscaneo('Error al procesar la tarjeta');
+      } else {
+        console.log('ℹ️ Escaneo cancelado por el usuario - quedándose en pantalla');
+        // Solo cancelar, no navegar
+        setIsScanning(false);
+      }
     } finally {
       setIsScanning(false);
     }
@@ -84,20 +125,20 @@ export default function ScanCardScreen({ navigation }: Props) {
   // 🔍 Buscar empleado por UID en Firebase
   const buscarEmpleado = async (uid: string) => {
     try {
-      console.log('🔍 Buscando empleado con UID:', uid);
+      console.log('Buscando empleado con UID:', uid);
       
       const empleado = await FirebaseService.buscarEmpleadoPorUID(uid);
       
       if (empleado) {
         // ✅ Empleado encontrado - registrar acceso
-        console.log('✅ Empleado encontrado:', empleado.nombre);
+        console.log('Empleado encontrado:', empleado.nombre);
         
         await registrarAcceso(empleado);
         
         // Navegar a pantalla de resultado exitoso
         navigation.navigate('Result', {
           type: 'success',
-          message: `✅ Acceso Autorizado\\n\\n🕐 ${new Date().toLocaleString('es-MX')}`,
+          message: `Acceso Autorizado ${new Date().toLocaleString('es-MX')}`,
           employee: {
             nombre: empleado.nombre,
             ocupacion: empleado.ocupacion,
@@ -107,16 +148,16 @@ export default function ScanCardScreen({ navigation }: Props) {
         
       } else {
         // ❌ Empleado no encontrado
-        console.log('❌ Tarjeta no registrada - UID:', uid);
+        console.log('Tarjeta no registrada - UID:', uid);
         
         navigation.navigate('Result', {
           type: 'not_found',
-          message: `❌ Tarjeta No Registrada\\n\\nUID: ${uid.substring(0, 8)}...\\n\\nContacta al administrador.`
+          message: `Tarjeta No Registrada, contacta al administrador.`
         });
       }
       
     } catch (error) {
-      console.error('❌ Error buscando empleado:', error);
+      console.error('Error buscando empleado:', error);
       mostrarErrorEscaneo('Error consultando base de datos');
     }
   };
@@ -130,10 +171,10 @@ export default function ScanCardScreen({ navigation }: Props) {
       const tipoAcceso = 'entrada';
       
       await FirebaseService.registrarAcceso(empleado, tipoAcceso);
-      console.log(`📊 Acceso de ${tipoAcceso} registrado para:`, empleado.nombre);
+      console.log(`Acceso de ${tipoAcceso} registrado para:`, empleado.nombre);
       
     } catch (error) {
-      console.error('❌ Error registrando acceso:', error);
+      console.error('Error registrando acceso:', error);
       // No interrumpir el flujo, solo loggear el error
     }
   };
@@ -142,7 +183,7 @@ export default function ScanCardScreen({ navigation }: Props) {
   const mostrarErrorEscaneo = (mensaje: string) => {
     navigation.navigate('Result', {
       type: 'error',
-      message: `❌ Error de Escaneo\\n\\n${mensaje}\\n\\nIntenta nuevamente.`
+      message: `Error de Escaneo, Intenta nuevamente.`
     });
   };
 
@@ -156,10 +197,13 @@ export default function ScanCardScreen({ navigation }: Props) {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => {
+          limpiarYSalir();
+          navigation.navigate('Home');
+        }} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🔍 Checador</Text>
+        <Text style={styles.title}>Checador</Text>
         <Text style={styles.subtitle}>Control de acceso de empleados</Text>
       </View>
 
@@ -185,11 +229,7 @@ export default function ScanCardScreen({ navigation }: Props) {
               
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => {
-                  setIsScanning(false);
-                  NFCService.cancelarDeteccion();
-                  navigation.goBack();
-                }}
+                onPress={cancelarEscaneo}
               >
                 <Text style={styles.cancelButtonText}>Cancelar Escaneo</Text>
               </TouchableOpacity>
@@ -216,29 +256,6 @@ export default function ScanCardScreen({ navigation }: Props) {
           )}
           
         </View>
-
-        {/* Información del proceso */}
-        <View style={styles.processInfo}>
-          <Text style={styles.processTitle}>📋 Proceso de Validación:</Text>
-          <View style={styles.processSteps}>
-            <Text style={styles.processStep}>1️⃣ Detectar tarjeta NFC</Text>
-            <Text style={styles.processStep}>2️⃣ Leer UID único</Text>
-            <Text style={styles.processStep}>3️⃣ Consultar en Firebase</Text>
-            <Text style={styles.processStep}>4️⃣ Validar empleado</Text>
-            <Text style={styles.processStep}>5️⃣ Registrar acceso</Text>
-          </View>
-        </View>
-
-        {/* Estadísticas de sesión */}
-        {scanCount > 0 && (
-          <View style={styles.statsBox}>
-            <Text style={styles.statsTitle}>📊 Sesión Actual:</Text>
-            <Text style={styles.statsText}>
-              Intentos de escaneo: {scanCount}
-            </Text>
-          </View>
-        )}
-        
       </View>
     </View>
   );
